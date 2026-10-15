@@ -1,41 +1,53 @@
-# Lumière Hair Salon — Base44 Setup
+# Horizon Properties — Base44 Setup
 
 ## Overview
-A single-page React + Vite marketing site for a hair salon, built from a reference
-image. No backend, no database, no external services.
+A premium real estate agency website built with React + Vite, featuring a multi-page
+experience with property browsing, filtering, and detail pages.
 
 ## Tech Stack
 - **React 18** + **Vite 5** (dev server with HMR)
-- Plain CSS (one global stylesheet + per-component CSS files)
-- Google Fonts: Playfair Display (headings) + Montserrat (body)
+- **React Router 6** for client-side routing (/, /properties, /properties/:id)
+- Plain CSS (global design tokens + per-component CSS files)
+- Google Fonts: Plus Jakarta Sans (all weights)
+- No backend/database — property data is in `src/data/properties.js`
 
 ## Running
 ```bash
 docker compose -f docker-compose.base44.yml up -d --build
 ```
-- Dev server runs on port 5173 inside the container, mapped to host port 3000.
-- `npm install` runs on container startup; `node_modules` is stored in a named
-  volume so bind-mounting the source doesn't clobber it.
-- Vite binds `0.0.0.0` and accepts the preview's external hostname via
-  `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` (set by the platform).
+- Dev server on port 5173 inside container, mapped to host port 3000.
+- `npm install` runs on startup; `node_modules` in a named volume.
+- Vite binds `0.0.0.0` with `allowedHosts: true` in preview mode.
 
 ## Structure
 ```
 src/
-  App.jsx              — root component, scroll-animation observer
-  main.jsx             — React entry point
-  styles/global.css    — design tokens, reset, shared utilities
+  App.jsx                    — BrowserRouter + Routes + scroll-animation observer
+  main.jsx                   — React entry point
+  data/properties.js          — 8 property records with images, specs, features
+  styles/global.css           — design tokens, reset, buttons, animations
   components/
-    Navbar.jsx         — fixed header with mobile burger menu
-    Hero.jsx           — hero with image, badge, social proof
-    Features.jsx       — 4-column feature grid
-    Services.jsx       — 4 service cards
-    MoreThanSalon.jsx   — split-circle section
-    FinalCTA.jsx       — circular image + booking CTA
-    Footer.jsx         — dark footer with links and contact
+    Header.jsx                — transparent→solid on scroll, mobile burger menu
+    Hero.jsx                  — full-width image, headline, search bar
+    About.jsx                 — two-column with asymmetric image composition
+    FeaturedProperties.jsx    — horizontal carousel with drag/scroll + arrows
+    PropertyCard.jsx           — reusable card (default/featured/compact variants)
+    Services.jsx              — 3×2 editorial grid of 6 services
+    WhyChoose.jsx              — dark navy stats + features section
+    Team.jsx                  — 4 team member cards with hover socials
+    CTA.jsx                   — circular icon + headline + button
+    Footer.jsx                — 4-column footer with newsletter signup
+    ScrollToTop.jsx            — scrolls to top on route change
+  pages/
+    Home.jsx                  — assembles all homepage sections
+    PropertiesPage.jsx        — filterable property listing (search, location, type, beds, price, sort)
+    PropertyDetail.jsx        — gallery with lightbox, specs, features, agent card, similar properties
 ```
 
 ## Verification
-- `curl http://localhost:3000/` should return the Vite HTML shell.
-- The page renders the full landing page with smooth-scroll nav links.
+- `curl http://localhost:3000/` returns the Vite HTML shell.
+- Homepage: hero, about, featured carousel, services, why-choose, team, CTA, footer.
+- `/properties` — 8 property cards with working filters and sort.
+- `/properties/:id` — gallery with thumbnails, lightbox, save button, agent card, similar properties.
+- Mobile: burger menu, responsive grids, swipeable carousel, no horizontal overflow.
 - No secrets or external credentials required.

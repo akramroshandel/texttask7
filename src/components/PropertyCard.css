@@ -1,0 +1,139 @@
+.property-card {
+  display: block;
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  transition: all var(--transition);
+  height: 100%;
+}
+
+.property-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.property-card__img-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+}
+
+.property-card__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.property-card:hover .property-card__img-wrap img { transform: scale(1.08); }
+
+.property-card__type {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-navy);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 50px;
+  backdrop-filter: blur(4px);
+}
+
+.property-card__fav {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  backdrop-filter: blur(4px);
+}
+
+.property-card__fav svg { width: 18px; height: 18px; }
+.property-card__fav:hover { color: #e74c3c; }
+.property-card__fav--active svg { fill: #e74c3c; color: #e74c3c; }
+
+.property-card__body { padding: 20px 22px 22px; }
+
+.property-card__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.property-card__location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  margin-bottom: 16px;
+}
+
+.property-card__location svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.property-card__specs {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 16px;
+}
+
+.property-card__specs span {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.property-card__specs strong {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.property-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.property-card__price {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-navy);
+}
+
+.property-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-gold);
+  transition: gap var(--transition);
+}
+
+.property-card:hover .property-card__link { gap: 10px; }
+.property-card__link svg { width: 15px; height: 15px; }
+
+/* Featured variant (larger) */
+.property-card--featured .property-card__img-wrap { aspect-ratio: 3 / 2; }
+.property-card--featured .property-card__name { font-size: 1.4rem; }
+.property-card--featured .property-card__price { font-size: 1.5rem; }
+
+/* Compact variant (for detail page similar properties) */
+.property-card--compact .property-card__body { padding: 14px 16px 16px; }
+.property-card--compact .property-card__name { font-size: 1rem; }
+.property-card--compact .property-card__price { font-size: 1.05rem; }

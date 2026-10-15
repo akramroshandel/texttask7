@@ -1,0 +1,99 @@
+.team { background: var(--color-bg); }
+
+.team__header {
+  text-align: center;
+  margin-bottom: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.team__header .eyebrow { margin-bottom: 12px; }
+.team__subtitle { margin-top: 16px; }
+
+.team__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+}
+
+.team__card { text-align: center; }
+
+.team__img-wrap {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 1;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.team__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.team__card:hover .team__img-wrap img { transform: scale(1.06); }
+
+.team__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(11, 31, 58, 0.75) 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.team__card:hover .team__overlay { opacity: 1; }
+
+.team__socials {
+  display: flex;
+  gap: 10px;
+  transform: translateY(12px);
+  transition: transform var(--transition);
+}
+
+.team__card:hover .team__socials { transform: translateY(0); }
+
+.team__socials a {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.team__socials a:hover { background: var(--color-gold); color: var(--color-white); }
+.team__socials svg { width: 16px; height: 16px; }
+
+.team__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.team__role {
+  font-size: 0.85rem;
+  color: var(--color-gold);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 968px) {
+  .team__grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+}
+
+@media (max-width: 480px) {
+  .team__grid { grid-template-columns: 1fr; gap: 28px; max-width: 320px; margin: 0 auto; }
+}

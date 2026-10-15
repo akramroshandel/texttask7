@@ -1,0 +1,109 @@
+.services { background: var(--color-white); }
+
+.services__header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.services__subtitle {
+  margin: 16px auto 0;
+}
+
+.services__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+.services__card {
+  padding: 40px 32px;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.services__card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--color-gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition);
+}
+
+.services__card:hover {
+  background: var(--color-white);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-6px);
+  border-color: transparent;
+}
+
+.services__card:hover::before {
+  transform: scaleX(1);
+}
+
+.services__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: var(--color-navy);
+  color: var(--color-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  transition: all var(--transition);
+}
+
+.services__icon svg { width: 26px; height: 26px; }
+
+.services__card:hover .services__icon {
+  background: var(--color-gold);
+  color: var(--color-white);
+}
+
+.services__card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
+
+.services__card-desc {
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  line-height: 1.65;
+  margin-bottom: 20px;
+}
+
+.services__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-gold);
+  letter-spacing: 0.03em;
+  transition: gap var(--transition);
+}
+
+.services__link svg { width: 16px; height: 16px; }
+
+.services__card:hover .services__link { gap: 12px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 968px) {
+  .services__grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+}
+
+@media (max-width: 640px) {
+  .services__grid { grid-template-columns: 1fr; gap: 20px; }
+  .services__card { padding: 32px 28px; }
+}

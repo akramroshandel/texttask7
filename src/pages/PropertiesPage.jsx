@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { properties, allLocations, allTypes } from '../data/properties.js'
 import PropertyCard from '../components/PropertyCard.jsx'
 import './PropertiesPage.css'
 
 export default function PropertiesPage() {
-  const [search, setSearch] = useState('')
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('search') || '')
   const [location, setLocation] = useState('')
   const [type, setType] = useState('')
   const [minBeds, setMinBeds] = useState(0)

@@ -38,6 +38,9 @@ const SCROLL_HEIGHT_VH = 300
 // Higher = more responsive but potentially jerky.
 // Lower = smoother but more lag. 0.15 is a good balance.
 const SMOOTHING = 0.15
+// This clip is 30 fps. Sub-frame seeks only interrupt decoding without
+// producing a different image.
+const FRAME_DURATION = 1 / 30
 
 export default function Hero() {
   const navigate = useNavigate()
@@ -62,50 +65,24 @@ export default function Hero() {
     const container = containerRef.current
     if (!video || !container) return
 
-    let duration = video.duration || 0
+    let duration = 0
     let targetProgress = 0
-    let currentTime = 0
+    let currentTime = video.currentTime
     let rafId = null
     let ready = false
     let lastBuffer = 0
 
-    // Race condition fix: if the video loaded from cache before this
-    // effect ran, loadeddata already fired and the listener below will
-    // never catch it. Check readyState and mark ready immediately.
-    if (video.readyState >= 2 && isFinite(video.duration) && video.duration > 0) {
-      ready = true
-      duration = video.duration
-      video.currentTime = 0
-      currentTime = 0
-      setVideoReady(true)
-    }
-
     // --- Video event handlers ---
 
-    const onLoadedMetadata = () => {
+    // Readiness can be reported more than once. Never reset the timeline
+    // when data/canplay fires again after a seek.
+    const onReady = () => {
+      if (ready || video.readyState < 2) return
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return
       duration = video.duration
-      if (!isFinite(duration) || isNaN(duration) || duration === 0) {
-        setVideoError(true)
-      }
-    }
-
-    const onLoadedData = () => {
+      currentTime = video.currentTime
       ready = true
-      duration = video.duration
-      video.currentTime = 0
-      currentTime = 0
       setVideoReady(true)
-    }
-
-    // Backup: canplay also indicates the video is ready for seeking
-    const onCanPlay = () => {
-      if (!ready) {
-        ready = true
-        duration = video.duration
-        video.currentTime = 0
-        currentTime = 0
-        setVideoReady(true)
-      }
     }
 
     const onError = () => setVideoError(true)
@@ -120,11 +97,14 @@ export default function Hero() {
       }
     }
 
-    video.addEventListener('loadedmetadata', onLoadedMetadata)
-    video.addEventListener('loadeddata', onLoadedData)
-    video.addEventListener('canplay', onCanPlay)
+    video.addEventListener('loadeddata', onReady)
+    video.addEventListener('canplay', onReady)
     video.addEventListener('error', onError)
     video.addEventListener('progress', onProgress)
+    // Handle cached media after registering listeners, so no load event
+    // can be missed between the readiness check and subscription.
+    onReady()
+    onProgress()
 
     // --- Passive scroll handler — only updates target, no DOM writes ---
 
@@ -135,6 +115,7 @@ export default function Hero() {
       targetProgress = Math.min(1, Math.max(0, -rect.top / scrollable))
     }
     window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
     onScroll() // initial call
 
     // --- RAF loop — smooth interpolation, direct DOM/video manipulation ---
@@ -152,21 +133,22 @@ export default function Hero() {
         )
       }
 
-      // Backup: detect readiness inside the loop if events were missed
-      if (!ready && video.readyState >= 2 && isFinite(video.duration) && video.duration > 0) {
-        ready = true
-        duration = video.duration
-        setVideoReady(true)
-      }
-
-      // Seek video only when ready
-      if (ready && duration > 0) {
-        const targetTime = targetProgress * duration
+      if (ready) {
+        // Stay on the last decodable frame, rather than seeking past the clip.
+        const lastFrame = Math.max(0, duration - FRAME_DURATION)
+        const targetTime = Math.min(targetProgress * duration, lastFrame)
         currentTime += (targetTime - currentTime) * SMOOTHING
+        const frameTime = Math.min(
+          lastFrame,
+          Math.round(currentTime / FRAME_DURATION) * FRAME_DURATION
+        )
 
-        // Only seek when the difference is meaningful (prevents seek flooding)
-        if (Math.abs(video.currentTime - currentTime) > 0.001) {
-          video.currentTime = currentTime
+        // Finish decoding and presenting the pending frame first. Writing
+        // currentTime on every RAF cancels slow seeks in some browsers:
+        // the timeline changes while the displayed image stays frozen.
+        // Once free, seek directly toward the latest scroll position.
+        if (!video.seeking && Math.abs(video.currentTime - frameTime) >= FRAME_DURATION / 2) {
+          video.currentTime = frameTime
         }
       }
 
@@ -176,9 +158,9 @@ export default function Hero() {
 
     return () => {
       window.removeEventListener('scroll', onScroll)
-      video.removeEventListener('loadedmetadata', onLoadedMetadata)
-      video.removeEventListener('loadeddata', onLoadedData)
-      video.removeEventListener('canplay', onCanPlay)
+      window.removeEventListener('resize', onScroll)
+      video.removeEventListener('loadeddata', onReady)
+      video.removeEventListener('canplay', onReady)
       video.removeEventListener('error', onError)
       video.removeEventListener('progress', onProgress)
       if (rafId) cancelAnimationFrame(rafId)

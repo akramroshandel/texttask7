@@ -159,6 +159,7 @@
 
 .hero__search-field input::placeholder { color: var(--color-text-muted); }
 .hero__search-btn { flex-shrink: 0; }
+.hero__search-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 /* ===== Loading indicator (thin gold progress bar) ===== */
 .hero__loading {

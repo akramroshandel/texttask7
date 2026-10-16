@@ -62,12 +62,23 @@ export default function Hero() {
     const container = containerRef.current
     if (!video || !container) return
 
-    let duration = 0
+    let duration = video.duration || 0
     let targetProgress = 0
     let currentTime = 0
     let rafId = null
     let ready = false
     let lastBuffer = 0
+
+    // Race condition fix: if the video loaded from cache before this
+    // effect ran, loadeddata already fired and the listener below will
+    // never catch it. Check readyState and mark ready immediately.
+    if (video.readyState >= 2 && isFinite(video.duration) && video.duration > 0) {
+      ready = true
+      duration = video.duration
+      video.currentTime = 0
+      currentTime = 0
+      setVideoReady(true)
+    }
 
     // --- Video event handlers ---
 
@@ -80,9 +91,21 @@ export default function Hero() {
 
     const onLoadedData = () => {
       ready = true
+      duration = video.duration
       video.currentTime = 0
       currentTime = 0
       setVideoReady(true)
+    }
+
+    // Backup: canplay also indicates the video is ready for seeking
+    const onCanPlay = () => {
+      if (!ready) {
+        ready = true
+        duration = video.duration
+        video.currentTime = 0
+        currentTime = 0
+        setVideoReady(true)
+      }
     }
 
     const onError = () => setVideoError(true)
@@ -99,6 +122,7 @@ export default function Hero() {
 
     video.addEventListener('loadedmetadata', onLoadedMetadata)
     video.addEventListener('loadeddata', onLoadedData)
+    video.addEventListener('canplay', onCanPlay)
     video.addEventListener('error', onError)
     video.addEventListener('progress', onProgress)
 
@@ -128,6 +152,13 @@ export default function Hero() {
         )
       }
 
+      // Backup: detect readiness inside the loop if events were missed
+      if (!ready && video.readyState >= 2 && isFinite(video.duration) && video.duration > 0) {
+        ready = true
+        duration = video.duration
+        setVideoReady(true)
+      }
+
       // Seek video only when ready
       if (ready && duration > 0) {
         const targetTime = targetProgress * duration
@@ -147,6 +178,7 @@ export default function Hero() {
       window.removeEventListener('scroll', onScroll)
       video.removeEventListener('loadedmetadata', onLoadedMetadata)
       video.removeEventListener('loadeddata', onLoadedData)
+      video.removeEventListener('canplay', onCanPlay)
       video.removeEventListener('error', onError)
       video.removeEventListener('progress', onProgress)
       if (rafId) cancelAnimationFrame(rafId)

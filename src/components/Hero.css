@@ -1,40 +1,90 @@
-.hero {
+/* ===== Scroll-driven hero container ===== */
+.hero-scroll {
+  position: relative;
+  width: 100%;
+  /* height set inline via style prop (300vh) */
+}
+
+.hero-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 640px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+/* ===== Static hero (reduced motion) ===== */
+.hero--static {
   position: relative;
   height: 100vh;
   min-height: 640px;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  overflow: hidden;
 }
 
+/* ===== Background (video + fallback image) ===== */
 .hero__bg {
   position: absolute;
   inset: 0;
   z-index: 0;
 }
 
-.hero__bg img {
+.hero__fallback {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  animation: scaleIn 8s ease-out forwards;
+  transition: opacity 0.8s ease;
+  will-change: opacity;
+  z-index: 1;
 }
 
+.hero__fallback--hidden {
+  opacity: 0;
+}
+
+.hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  will-change: opacity;
+  background: var(--color-navy);
+  z-index: 2;
+}
+
+.hero__video--visible {
+  opacity: 1;
+}
+
+/* ===== Overlay (subtle — keeps video visually dominant) ===== */
 .hero__overlay {
   position: absolute;
   inset: 0;
+  z-index: 3;
+  pointer-events: none;
   background: linear-gradient(
-    135deg,
-    rgba(11, 31, 58, 0.72) 0%,
-    rgba(11, 31, 58, 0.45) 50%,
-    rgba(11, 31, 58, 0.65) 100%
+    to bottom,
+    rgba(11, 31, 58, 0.35) 0%,
+    rgba(11, 31, 58, 0.12) 25%,
+    rgba(11, 31, 58, 0.12) 70%,
+    rgba(11, 31, 58, 0.4) 100%
   );
 }
 
+/* ===== Content (opacity/transform controlled by RAF loop) ===== */
 .hero__content {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   max-width: 680px;
+  will-change: opacity, transform;
 }
 
 .hero__eyebrow {
@@ -47,7 +97,6 @@
   text-transform: uppercase;
   color: var(--color-gold);
   margin-bottom: 24px;
-  opacity: 0;
 }
 
 .hero__eyebrow-line {
@@ -63,7 +112,6 @@
   line-height: 1.08;
   letter-spacing: -0.02em;
   margin-bottom: 24px;
-  opacity: 0;
 }
 
 .hero__subtitle {
@@ -72,15 +120,13 @@
   line-height: 1.7;
   margin-bottom: 40px;
   max-width: 480px;
-  opacity: 0;
 }
 
-/* Search bar */
+/* ===== Search bar ===== */
 .hero__search {
   display: flex;
   gap: 12px;
   max-width: 560px;
-  opacity: 0;
 }
 
 .hero__search-field {
@@ -112,20 +158,48 @@
 }
 
 .hero__search-field input::placeholder { color: var(--color-text-muted); }
-
 .hero__search-btn { flex-shrink: 0; }
 
+/* ===== Loading indicator (thin gold progress bar) ===== */
+.hero__loading {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 5;
+  padding: 0 32px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.hero__loading-track {
+  width: 100%;
+  max-width: var(--max-width);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hero__loading-fill {
+  height: 100%;
+  background: var(--color-gold);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ===== Scroll indicator ===== */
 .hero__scroll {
   position: absolute;
   bottom: 36px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  opacity: 0;
 }
 
 .hero__scroll span {
@@ -155,7 +229,7 @@
 }
 
 @media (max-width: 768px) {
-  .hero { min-height: 560px; }
+  .hero-sticky, .hero--static { min-height: 560px; }
   .hero__title { font-size: 2.5rem; }
   .hero__subtitle { font-size: 1rem; margin-bottom: 32px; }
   .hero__search { flex-direction: column; gap: 10px; }

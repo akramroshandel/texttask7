@@ -75,13 +75,16 @@ export default function Hero() {
 
     let duration = 0
     let targetProgress = 0
+    let renderedProgress = 0
     let currentTime = video.currentTime
+    let seekFramePending = false
     let rafId = null
     let videoFrameId = null
     let ready = false
     let hasFrame = false
     let failed = false
     let lastBuffer = 0
+    const hasVideoFrameCallback = typeof video.requestVideoFrameCallback === 'function'
 
     const onError = () => {
       failed = true
@@ -90,15 +93,18 @@ export default function Hero() {
       setVideoError(true)
     }
 
-    // Media readiness is not display readiness. Reveal the canvas only
-    // after drawing an opaque frame; keep the poster underneath at all times.
-    const drawFrame = () => {
+    // Only a decoded, drawn frame advances the text animation. A completed
+    // seek alone does not mean the browser has presented the new video frame.
+    const drawFrame = (mediaTime) => {
       if (failed || video.seeking || video.readyState < 2 || !video.videoWidth) return
       try {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
         if (!hasFrame && ctx.getImageData(0, 0, 1, 1).data[3] !== 0) {
           hasFrame = true
           setVideoReady(true)
+        }
+        if (hasFrame && duration > 0) {
+          renderedProgress = Math.min(1, Math.max(0, mediaTime / duration))
         }
       } catch (error) {
         console.error('Unable to draw the hero video frame.', error)
@@ -114,15 +120,17 @@ export default function Hero() {
         currentTime = video.currentTime
         ready = true
       }
-      drawFrame()
+      if (!hasFrame) drawFrame(video.currentTime)
     }
 
-    // Draw when decoding completes, before RAF can start another seek.
-    // Drawing after assigning currentTime can instead see HAVE_METADATA
-    // and skip every frame on a slower decoder.
-    const onSeeked = () => drawFrame()
-    const onVideoFrame = () => {
-      drawFrame()
+    // Paused or hidden videos may not deliver a frame callback for every
+    // seek. Draw the completed seek on RAF and leave a paint before seeking
+    // again; frame callbacks can still refresh the canvas when available.
+    const onSeeked = () => {
+      seekFramePending = true
+    }
+    const onVideoFrame = (_now, metadata) => {
+      drawFrame(metadata.mediaTime)
       if (!failed) videoFrameId = video.requestVideoFrameCallback(onVideoFrame)
     }
 
@@ -142,7 +150,7 @@ export default function Hero() {
     video.addEventListener('error', onError)
     video.addEventListener('progress', onProgress)
     canvas.addEventListener('contextlost', onError)
-    if (video.requestVideoFrameCallback) {
+    if (hasVideoFrameCallback) {
       videoFrameId = video.requestVideoFrameCallback(onVideoFrame)
     }
     // Also handle media that loaded from cache before the effect subscribed.
@@ -162,8 +170,14 @@ export default function Hero() {
     onScroll()
 
     const tick = () => {
+      const drawSeekFrame = seekFramePending && !video.seeking
+      if (drawSeekFrame) {
+        drawFrame(video.currentTime)
+        seekFramePending = false
+      }
+
       // Keep the headline visible if media loading or drawing has failed.
-      const visualProgress = hasFrame && !failed ? targetProgress : 0
+      const visualProgress = hasFrame && !failed ? renderedProgress : 0
       if (contentRef.current) {
         contentRef.current.style.opacity = String(Math.max(0, 1 - visualProgress * 4))
         contentRef.current.style.transform = `translateY(${-visualProgress * 60}px)`
@@ -180,7 +194,8 @@ export default function Hero() {
           lastFrame,
           Math.round(currentTime / FRAME_DURATION) * FRAME_DURATION
         )
-        if (!video.seeking && Math.abs(video.currentTime - frameTime) >= FRAME_DURATION / 2) {
+        if (!drawSeekFrame && !video.seeking && video.readyState >= 2 &&
+            Math.abs(video.currentTime - frameTime) >= FRAME_DURATION / 2) {
           video.currentTime = frameTime
         }
       }

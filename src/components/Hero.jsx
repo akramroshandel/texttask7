@@ -65,30 +65,66 @@ export default function Hero() {
     const video = videoRef.current
     const container = containerRef.current
     const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (!video || !container) return
+    if (!video || !container || !canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      setVideoError(true)
+      return
+    }
 
     let duration = 0
     let targetProgress = 0
     let currentTime = video.currentTime
     let rafId = null
+    let videoFrameId = null
     let ready = false
+    let hasFrame = false
+    let failed = false
     let lastBuffer = 0
 
-    // --- Video event handlers ---
-
-    // Readiness can be reported more than once. Never reset the timeline
-    // when data/canplay fires again after a seek.
-    const onReady = () => {
-      if (ready || video.readyState < 2) return
-      if (!Number.isFinite(video.duration) || video.duration <= 0) return
-      duration = video.duration
-      currentTime = video.currentTime
-      ready = true
-      setVideoReady(true)
+    const onError = () => {
+      failed = true
+      ready = false
+      setVideoReady(false)
+      setVideoError(true)
     }
 
-    const onError = () => setVideoError(true)
+    // Media readiness is not display readiness. Reveal the canvas only
+    // after drawing an opaque frame; keep the poster underneath at all times.
+    const drawFrame = () => {
+      if (failed || video.seeking || video.readyState < 2 || !video.videoWidth) return
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        if (!hasFrame && ctx.getImageData(0, 0, 1, 1).data[3] !== 0) {
+          hasFrame = true
+          setVideoReady(true)
+        }
+      } catch (error) {
+        console.error('Unable to draw the hero video frame.', error)
+        onError()
+      }
+    }
+
+    const onReady = () => {
+      if (failed || video.readyState < 2) return
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return
+      if (!ready) {
+        duration = video.duration
+        currentTime = video.currentTime
+        ready = true
+      }
+      drawFrame()
+    }
+
+    // Draw when decoding completes, before RAF can start another seek.
+    // Drawing after assigning currentTime can instead see HAVE_METADATA
+    // and skip every frame on a slower decoder.
+    const onSeeked = () => drawFrame()
+    const onVideoFrame = () => {
+      drawFrame()
+      if (!failed) videoFrameId = video.requestVideoFrameCallback(onVideoFrame)
+    }
 
     const onProgress = () => {
       if (video.buffered.length > 0 && duration > 0) {
@@ -102,42 +138,41 @@ export default function Hero() {
 
     video.addEventListener('loadeddata', onReady)
     video.addEventListener('canplay', onReady)
+    video.addEventListener('seeked', onSeeked)
     video.addEventListener('error', onError)
     video.addEventListener('progress', onProgress)
-    // Handle cached media after registering listeners, so no load event
-    // can be missed between the readiness check and subscription.
-    onReady()
+    canvas.addEventListener('contextlost', onError)
+    if (video.requestVideoFrameCallback) {
+      videoFrameId = video.requestVideoFrameCallback(onVideoFrame)
+    }
+    // Also handle media that loaded from cache before the effect subscribed.
+    if (video.error) onError()
+    else onReady()
     onProgress()
-
-    // --- Passive scroll handler — only updates target, no DOM writes ---
 
     const onScroll = () => {
       const rect = container.getBoundingClientRect()
       const scrollable = rect.height - window.innerHeight
-      if (scrollable <= 0) return
-      targetProgress = Math.min(1, Math.max(0, -rect.top / scrollable))
+      targetProgress = scrollable > 0
+        ? Math.min(1, Math.max(0, -rect.top / scrollable))
+        : 0
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
-    onScroll() // initial call
-
-    // --- RAF loop — smooth interpolation, direct DOM/video manipulation ---
+    onScroll()
 
     const tick = () => {
-      // Fade text content based on scroll progress (works even before video ready)
+      // Keep the headline visible if media loading or drawing has failed.
+      const visualProgress = hasFrame && !failed ? targetProgress : 0
       if (contentRef.current) {
-        const opacity = Math.max(0, 1 - targetProgress * 4) // fully faded by 25% scroll
-        contentRef.current.style.opacity = String(opacity)
-        contentRef.current.style.transform = `translateY(${-targetProgress * 60}px)`
+        contentRef.current.style.opacity = String(Math.max(0, 1 - visualProgress * 4))
+        contentRef.current.style.transform = `translateY(${-visualProgress * 60}px)`
       }
       if (scrollIndicatorRef.current) {
-        scrollIndicatorRef.current.style.opacity = String(
-          Math.max(0, 1 - targetProgress * 8) // faded by 12.5% scroll
-        )
+        scrollIndicatorRef.current.style.opacity = String(Math.max(0, 1 - visualProgress * 8))
       }
 
       if (ready) {
-        // Stay on the last decodable frame, rather than seeking past the clip.
         const lastFrame = Math.max(0, duration - FRAME_DURATION)
         const targetTime = Math.min(targetProgress * duration, lastFrame)
         currentTime += (targetTime - currentTime) * SMOOTHING
@@ -145,20 +180,8 @@ export default function Hero() {
           lastFrame,
           Math.round(currentTime / FRAME_DURATION) * FRAME_DURATION
         )
-
-        // Finish decoding and presenting the pending frame first. Writing
-        // currentTime on every RAF cancels slow seeks in some browsers:
-        // the timeline changes while the displayed image stays frozen.
-        // Once free, seek directly toward the latest scroll position.
         if (!video.seeking && Math.abs(video.currentTime - frameTime) >= FRAME_DURATION / 2) {
           video.currentTime = frameTime
-        }
-
-        // Draw the current decoded frame to the canvas. Chrome doesn't
-        // repaint a paused <video> element after seeking, so we render
-        // the frame ourselves — the canvas always shows the latest image.
-        if (ctx && video.readyState >= 2) {
-          try { ctx.drawImage(video, 0, 0, canvas.width, canvas.height) } catch {}
         }
       }
 
@@ -171,9 +194,12 @@ export default function Hero() {
       window.removeEventListener('resize', onScroll)
       video.removeEventListener('loadeddata', onReady)
       video.removeEventListener('canplay', onReady)
+      video.removeEventListener('seeked', onSeeked)
       video.removeEventListener('error', onError)
       video.removeEventListener('progress', onProgress)
-      if (rafId) cancelAnimationFrame(rafId)
+      canvas.removeEventListener('contextlost', onError)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      if (videoFrameId !== null) video.cancelVideoFrameCallback(videoFrameId)
     }
   }, [reducedMotion])
 
@@ -246,9 +272,9 @@ export default function Hero() {
     >
       <div className="hero-sticky">
         <div className="hero__bg">
-          {/* Fallback image — always present behind video, crossfades out */}
+          {/* Keep the poster behind the canvas, including during failed draws. */}
           <img
-            className={`hero__fallback ${videoReady && !videoError ? 'hero__fallback--hidden' : ''}`}
+            className="hero__fallback"
             src={FALLBACK_IMG}
             alt="Luxury modern architecture"
           />
@@ -265,7 +291,7 @@ export default function Hero() {
               src={VIDEO_URL}
             />
           )}
-          {/* Canvas — renders the video frame, works around Chrome's paused-seek bug */}
+          {/* Canvas is revealed only after a decoded frame has been drawn. */}
           {!videoError && (
             <canvas
               ref={canvasRef}

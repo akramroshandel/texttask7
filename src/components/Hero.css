@@ -43,10 +43,6 @@
   z-index: 1;
 }
 
-.hero__fallback--hidden {
-  opacity: 0;
-}
-
 .hero__video {
   position: absolute;
   inset: 0;
@@ -56,7 +52,7 @@
   opacity: 0;
   transition: opacity 0.8s ease;
   will-change: opacity;
-  background: var(--color-navy);
+  background: transparent;
   z-index: 2;
 }
 

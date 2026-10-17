@@ -51,6 +51,7 @@ export default function Hero() {
 
   const containerRef = useRef(null)
   const videoRef = useRef(null)
+  const canvasRef = useRef(null)
   const contentRef = useRef(null)
   const scrollIndicatorRef = useRef(null)
 
@@ -63,6 +64,8 @@ export default function Hero() {
 
     const video = videoRef.current
     const container = containerRef.current
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
     if (!video || !container) return
 
     let duration = 0
@@ -149,6 +152,13 @@ export default function Hero() {
         // Once free, seek directly toward the latest scroll position.
         if (!video.seeking && Math.abs(video.currentTime - frameTime) >= FRAME_DURATION / 2) {
           video.currentTime = frameTime
+        }
+
+        // Draw the current decoded frame to the canvas. Chrome doesn't
+        // repaint a paused <video> element after seeking, so we render
+        // the frame ourselves — the canvas always shows the latest image.
+        if (ctx && video.readyState >= 2) {
+          try { ctx.drawImage(video, 0, 0, canvas.width, canvas.height) } catch {}
         }
       }
 
@@ -242,16 +252,26 @@ export default function Hero() {
             src={FALLBACK_IMG}
             alt="Luxury modern architecture"
           />
-          {/* Scroll-driven video — no autoplay, no loop, scrubbed via currentTime */}
+          {/* Hidden video — used only for decoding; canvas renders the visible frame */}
           {!videoError && (
             <video
               ref={videoRef}
-              className={`hero__video ${videoReady ? 'hero__video--visible' : ''}`}
+              className="hero__video-source"
               preload="auto"
               muted
               playsInline
+              crossOrigin="anonymous"
               tabIndex={-1}
               src={VIDEO_URL}
+            />
+          )}
+          {/* Canvas — renders the video frame, works around Chrome's paused-seek bug */}
+          {!videoError && (
+            <canvas
+              ref={canvasRef}
+              className={`hero__video ${videoReady ? 'hero__video--visible' : ''}`}
+              width={1920}
+              height={1080}
             />
           )}
           <div className="hero__overlay" />

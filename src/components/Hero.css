@@ -64,6 +64,18 @@
   opacity: 1;
 }
 
+/* Hidden video element — used only for decoding, canvas renders the frame */
+.hero__video-source {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* ===== Overlay (subtle — keeps video visually dominant) ===== */
 .hero__overlay {
   position: absolute;
